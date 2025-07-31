@@ -10,6 +10,8 @@ from tqdm import tqdm
 OUTPUT_PATH = "./output/"
 INPUT_PATH = "./input/"
 
+SCRAPE_OUTPUT_PATH = OUTPUT_PATH + 'scrape/'
+
 PERSONNEL_PATH = OUTPUT_PATH + 'personnel_rows.csv'
 CONDITIONS_PATH = OUTPUT_PATH + 'conditions_rows.csv'
 ASSESSMENTS_PATH = OUTPUT_PATH + 'assessments_rows.csv'
@@ -30,8 +32,21 @@ personnel_columns = ["course_id", "name", "role", "email"]
 assessment_groups_columns = ["id", "course_id", "weight", "count", "drop", "name", "type", "optional"]
 assessments_columns = ["group_id", "weight", "index"]
 conditions_columns = ["course_id", "group_id", "scheme", "lower", "upper"]
+outlines_columns = ["code", "name", "description", "term"]
+sections_columns = ["section", "code"]
+types_columns = ["type", "code"]
 
 invalid_emails = ["a6lian@uwaterloo.ca"]
+
+DEPARTMENTS = [
+    "AE", "BME", "CHE", "CIVE", "ECE", "ME", "MSCI", "MSE", "MTE", "NE", "SE", "SYDE",
+    "AMATH", "ACTSC", "CO", "CS", "MATH", "STAT",
+    "ASTRN", "BIOL", "CHEM", "EARTH", "OPTOM", "PHYS", "SCBUS", "SCI",
+    "HEALTH", "HLTH", "KIN", "PHS", "REC",
+    "ERS", "GEOG", "INTEG", "PLAN",
+    "AFM", "APPLS", "ANTH", "BLKST", "CLAS", "COMMST", "EASIA", "ECON", "EMLS", "ENGL", "FINE", "FR", "GER", "GBDA", "GSJ", "GGOV", "HIST", "ISS", "ITAL", "ITALST", "JS", "LS", "MEDVL", "MUSIC", "PACS", "PHIL", "PSCI", "PSYCH", "RS", "SDS", "SMF", "SOC", "SOCWK", "SWK", "SWREN", "SPAN", "TS",
+    "BET", "PD", "SAF", "ARCH", "DAC", "ENBUS", "SFM"
+]
 
 @final
 class Colors:

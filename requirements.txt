@@ -1,2 +1,10 @@
 # Progress Bar
 tqdm
+
+#.Env Secrets
+python-dotenv
+
+#Scraping
+requests
+lxml
+beautifulsoup4
