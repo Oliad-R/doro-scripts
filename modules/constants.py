@@ -2,10 +2,13 @@
 Constants for other modules
 """
 
+import os
 import csv
 from typing import final
 from enum import Enum
 from tqdm import tqdm
+from uuid import uuid4
+from copy import deepcopy
 
 OUTPUT_PATH = "./output/"
 INPUT_PATH = "./input/"
@@ -28,13 +31,13 @@ class OutlinesCols(Enum):
     COURSE_NAME = 4
     COURSE_DESCRIPTION = 5
 
-personnel_columns = ["course_id", "name", "role", "email"]
+personnels_columns = ["course_id", "name", "role", "email"]
 assessment_groups_columns = ["id", "course_id", "weight", "count", "drop", "name", "type", "optional"]
-assessments_columns = ["group_id", "weight", "index"]
+assessments_columns = ["id", "group_id", "weight", "index", "due_date", "name"]
 conditions_columns = ["course_id", "group_id", "scheme", "lower", "upper"]
-outlines_columns = ["code", "name", "description", "term"]
-sections_columns = ["section", "code"]
-types_columns = ["type", "code"]
+outlines_columns = ["id", "code", "name", "description", "term", "url"]
+sections_columns = ["section", "course_id"]
+types_columns = ["type", "course_id"]
 
 invalid_emails = ["a6lian@uwaterloo.ca"]
 
@@ -100,3 +103,78 @@ def count_rows(filename: str) -> tuple[bool, int | None]:
         return False, None
 
     return True, num_rows
+
+def prompt(section_html: str):
+    return f"""
+    You are a strict parser.
+
+    Rules:
+    - Output only JSON, no prose.
+    - Use absolute weights as decimals (e.g., 0.5 for 50%).
+    - Create assessment GROUPS (e.g., "Quizzes") and ITEMS inside each group.
+    - If a group has a total like "Quiz [50%]" and items like "[25%]":
+      - Treat item percents as RELATIVE to the group total unless the page clearly states they are course-level.
+      - So four items each "[25%]" under "Quiz [50%]" → each item weight is 0.5 * 0.25 = 0.125.
+    - Numbering may be wrong or skipped (e.g., "Quiz5"). Do NOT assume missing numbers imply missing items.
+      - Set item indexes sequentially by appearance starting at 0 (0,1,2,3...), ignoring the label’s number.
+    - Set group.count to the number of items you produced for that group.
+    - group.drop: parse if present (e.g., "lowest two dropped"); otherwise 0.
+    - If both undergraduate and graduate variants exist, prefer undergraduate unless the item is marked graduate-only (then optional=true).
+    - Ensure the sum of item weights equals the group weight (±0.5%). If item weights aren’t provided, split group weight evenly.
+    - If dates are not directly parseable into a YYYY-MM-DD HH:mm:ss datetime format then use null, also year is always 2025
+
+    Example (edge case):
+    HTML snippet:
+      Quiz [50%]
+      Quiz1: [25%] Topic A
+      Quiz2: [25%] Topic B
+      Quiz3: [25%] Topic C
+      Quiz5: [25%] Topic D
+
+    Expectation:
+    - 1 group "Quizzes" with weight 0.5 and count 4.
+    - 4 items with indexes 0..3 and weights 0.125 each, in the order they appear.
+
+    HTML to parse:
+    {section_html}
+    """
+
+def personnels_prompt(section_html: str):
+    return f"""
+    You are a strict parser.
+
+    Rules:
+    - Output only JSON, no prose.
+    - Role's should only be Professor or TA. No variance, if it doesn't fit then skip it.
+    - Courses can have no personnel, just return nothing
+
+    HTML to parse:
+    {section_html}
+    """
+
+
+def assign_ids(parsed_output):
+    parsed = deepcopy(parsed_output)
+
+    # map placeholder group_id -> real UUID
+    group_id_map = {}
+
+    for group in parsed.assessment_groups:
+        real_id = str(uuid4())
+        group_id_map[group.id] = real_id
+        group.id = real_id
+
+    # assign UUIDs to assessments and remap group_id
+    for idx, assessment in enumerate(parsed.assessments):
+        assessment.id = str(uuid4())
+        assessment.group_id = group_id_map.get(assessment.group_id, assessment.group_id)
+
+    return parsed
+
+def open_csv_with_header(path: str, columns: list[str]):
+    file_exists = os.path.isfile(path)
+    csv_file = open(path, "a", encoding="utf-8", newline="")
+    writer = csv.writer(csv_file, lineterminator="\n")
+    if not file_exists or os.stat(path).st_size == 0:
+        writer.writerow(columns)
+    return csv_file, writer

@@ -8,3 +8,7 @@ python-dotenv
 requests
 lxml
 beautifulsoup4
+
+#Parsing
+pydantic
+google-genai
